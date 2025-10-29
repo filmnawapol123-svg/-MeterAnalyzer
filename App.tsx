@@ -99,6 +99,11 @@ const App: React.FC = () => {
         {analysisResult && (
           <div className="mt-8 w-full">
             <ResultsTable results={analysisResult} />
+            <div className="mt-6 w-full max-w-5xl mx-auto p-4 bg-red-100 border-2 border-red-400 text-red-800 rounded-lg text-center" role="alert">
+              <p className="font-bold text-lg">
+                โปรดตรวจสอบข้อมูลให้ถูกต้องก่อนนำไปใช้งาน
+              </p>
+            </div>
           </div>
         )}
       </main>
