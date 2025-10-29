@@ -50,9 +50,9 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-gray-50 text-gray-800 flex flex-col items-center p-4 sm:p-6 md:p-8">
       <header className="text-center mb-8 no-print">
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900">
-          เครื่องมือวิเคราะห์ค่ามิเตอร์ไฟฟ้า
+          เครื่องมือวิเคราะห์ค่ามิเตอร์ไฟฟ้า (Electric Meter Analyzer)
         </h1>
-        <p className="mt-2 text-md sm:text-lg text-gray-600 max-w-3xl">
+        <p className="mt-2 text-md sm:text-lg text-gray-600 max-w-3xl mx-auto">
           อัปโหลดรูปภาพตารางค่ามิเตอร์ไฟฟ้าของคุณเพื่อตรวจสอบความถูกต้องของการคำนวณโดยอัตโนมัติด้วย Gemini AI
         </p>
       </header>
@@ -104,7 +104,7 @@ const App: React.FC = () => {
       </main>
 
       <footer className="text-center text-gray-500 text-sm mt-12 no-print">
-        <p>ขับเคลื่อนโดย Google Gemini API</p>
+        <p>Powered by Google Gemini API</p>
       </footer>
     </div>
   );
