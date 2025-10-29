@@ -1,0 +1,205 @@
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { AnalysisResult } from '../types';
+
+interface ResultsTableProps {
+  results: AnalysisResult[];
+}
+
+const CheckIcon: React.FC = () => (
+    <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+);
+
+const CrossIcon: React.FC = () => (
+    <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+);
+
+const SortIcon: React.FC<{ direction: 'asc' | 'desc' | 'none' }> = ({ direction }) => {
+    const baseClasses = "w-4 h-4 inline-block ml-1 transition-opacity";
+    if (direction === 'none') {
+        return <svg className={`${baseClasses} text-gray-400 opacity-30 group-hover:opacity-100`} aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>;
+    }
+    return direction === 'asc' ? (
+        <svg className={`${baseClasses} text-blue-600`} aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"/></svg>
+    ) : (
+        <svg className={`${baseClasses} text-blue-600`} aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
+    );
+};
+
+
+const ResultsTable: React.FC<ResultsTableProps> = ({ results }) => {
+  const [sortConfig, setSortConfig] = useState<{ key: keyof AnalysisResult | null; direction: 'asc' | 'desc' }>({ key: null, direction: 'asc' });
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  const sortedResults = useMemo(() => {
+    if (!results) return [];
+    let sortableItems = [...results];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key!];
+        const bValue = b[sortConfig.key!];
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [results, sortConfig]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleExportCsv = () => {
+    const headers = ['เงื่อนไขตรวจสอบ', 'สมการที่คำนวณ', 'ผลลัพธ์ที่ได้', 'ค่าที่ควรเป็น', 'สถานะ', 'เหตุผล'];
+    const csvRows = [headers.join(',')];
+
+    sortedResults.forEach(result => {
+      const statusText = result.status ? 'ผ่าน' : 'ไม่ผ่าน';
+      const reasonText = result.reason ? result.reason.replace(/"/g, '""') : '';
+      const values = [
+        `"${result.condition}"`,
+        `"${result.calculation}"`,
+        `"${result.actualResult}"`,
+        `"${result.expectedValue}"`,
+        `"${statusText}"`,
+        `"${reasonText}"`
+      ];
+      csvRows.push(values.join(','));
+    });
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([`\uFEFF${csvString}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'analysis_results.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setIsExportMenuOpen(false);
+  };
+
+  const handlePrint = () => {
+    window.print();
+    setIsExportMenuOpen(false);
+  };
+
+  const requestSort = (key: keyof AnalysisResult) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  if (!results || results.length === 0) {
+    return null;
+  }
+
+  const getSortDirectionForKey = (key: keyof AnalysisResult) => {
+      return sortConfig.key === key ? sortConfig.direction : 'none';
+  }
+
+  return (
+    <div id="results-section" className="w-full max-w-5xl mx-auto mt-8 bg-white shadow-xl rounded-2xl overflow-hidden">
+        <div className="flex justify-between items-center p-6 bg-gray-100 border-b">
+            <h2 className="text-2xl font-bold text-gray-800">ผลการตรวจสอบ</h2>
+            <div className="relative no-print" ref={exportMenuRef}>
+                <button
+                    onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                    ส่งออกผลลัพธ์
+                    <svg className="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                </button>
+                {isExportMenuOpen && (
+                    <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                        <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                            <button onClick={handleExportCsv} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" role="menuitem">
+                                ดาวน์โหลด CSV
+                            </button>
+                            <button onClick={handlePrint} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" role="menuitem">
+                                บันทึกเป็น PDF
+                            </button>
+                            <button onClick={handlePrint} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" role="menuitem">
+                                พิมพ์
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+        <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+                <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <button onClick={() => requestSort('condition')} className="group flex items-center focus:outline-none focus:text-blue-600">
+                            <span>เงื่อนไขตรวจสอบ</span>
+                            <SortIcon direction={getSortDirectionForKey('condition')} />
+                        </button>
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สมการที่คำนวณ</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ผลลัพธ์ที่ได้</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ค่าที่ควรเป็น</th>
+                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                         <button onClick={() => requestSort('status')} className="group flex items-center mx-auto focus:outline-none focus:text-blue-600">
+                            <span>สถานะ</span>
+                            <SortIcon direction={getSortDirectionForKey('status')} />
+                        </button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+                {sortedResults.map((result, index) => (
+                <tr key={index} className={`${result.status ? 'bg-green-50 hover:bg-green-100' : 'bg-red-50 hover:bg-red-100'} transition-colors`}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{result.condition}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">{result.calculation}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">{result.actualResult}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">{result.expectedValue}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                    <div className={`inline-flex items-center justify-center space-x-2 px-3 py-1 rounded-full ${result.status ? 'bg-green-100' : 'bg-red-100'}`}>
+                        {result.status ? <CheckIcon /> : <CrossIcon />}
+                        <span className={`font-semibold ${result.status ? 'text-green-600' : 'text-red-600'}`}>
+                            {result.status ? 'ผ่าน' : 'ไม่ผ่าน'}
+                        </span>
+                    </div>
+                    {!result.status && result.reason && (
+                        <p className="text-xs text-red-500 mt-1">{result.reason}</p>
+                    )}
+                    </td>
+                </tr>
+                ))}
+            </tbody>
+            </table>
+        </div>
+    </div>
+  );
+};
+
+export default ResultsTable;
