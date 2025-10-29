@@ -1,4 +1,3 @@
-
 export interface AnalysisResult {
   condition: string;
   calculation: string;
@@ -6,4 +5,11 @@ export interface AnalysisResult {
   expectedValue: number | string;
   status: boolean;
   reason?: string;
+}
+
+export interface SavedSession {
+  id: string;
+  name: string;
+  timestamp: string;
+  results: AnalysisResult[];
 }
