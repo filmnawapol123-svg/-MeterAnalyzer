@@ -132,7 +132,7 @@ const App: React.FC = () => {
       <div className="flex flex-col items-center p-4 sm:p-6 md:p-8 overflow-y-auto">
         <header className="text-center mb-8 no-print w-full">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900">
-            เครื่องมือวิเคราะห์ค่ามิเตอร์ไฟฟ้า
+            เครื่องมือวิเคราะห์ค่ามิเตอร์ไฟฟ้า (Electric Meter Analyzer)
           </h1>
           <p className="mt-2 text-md sm:text-lg text-gray-600 max-w-3xl mx-auto">
             อัปโหลดรูปภาพตารางค่ามิเตอร์ไฟฟ้าของคุณเพื่อตรวจสอบความถูกต้องของการคำนวณโดยอัตโนมัติด้วย Gemini AI
