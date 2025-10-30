@@ -12,4 +12,5 @@ export interface SavedSession {
   name: string;
   timestamp: string;
   results: AnalysisResult[];
+  imageDataUrl?: string;
 }

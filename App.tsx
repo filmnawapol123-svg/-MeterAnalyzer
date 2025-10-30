@@ -9,6 +9,57 @@ import { AnalysisResult, SavedSession } from './types';
 
 const LOCAL_STORAGE_KEY = 'electric-meter-analysis-history';
 
+/**
+ * Creates a resized and compressed base64 data URL from an image file.
+ * @param file The image file to process.
+ * @param maxSize The maximum width or height of the image.
+ * @param quality The JPEG quality (0 to 1).
+ * @returns A promise that resolves with the base64 data URL.
+ */
+const createImageThumbnail = (file: File, maxSize: number = 800, quality: number = 0.7): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      if (!event.target?.result) {
+        return reject(new Error('Failed to read file.'));
+      }
+      const img = new Image();
+      img.src = event.target.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+
+        if (width > height) {
+          if (width > maxSize) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return reject(new Error('Could not get canvas context'));
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+
 const App: React.FC = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -76,13 +127,24 @@ const App: React.FC = () => {
     }
   };
   
-  const handleSaveSession = (name: string) => {
+  const handleSaveSession = async (name: string) => {
     if (!analysisResult) return;
+
+    let thumbnail: string | undefined = undefined;
+    if (imageFile) {
+      try {
+        thumbnail = await createImageThumbnail(imageFile);
+      } catch (error) {
+        console.error("Failed to create image thumbnail for session:", error);
+      }
+    }
+
     const newSession: SavedSession = {
       id: Date.now().toString(),
       name,
       timestamp: new Date().toISOString(),
       results: analysisResult,
+      imageDataUrl: thumbnail,
     };
     const updatedSessions = [newSession, ...savedSessions];
     setSavedSessions(updatedSessions);
@@ -96,9 +158,9 @@ const App: React.FC = () => {
     if (session) {
       setAnalysisResult(session.results);
       setActiveSessionId(session.id);
+      setImageUrl(session.imageDataUrl || null);
       // Clear current image analysis state
       setImageFile(null);
-      setImageUrl(null);
       setError(null);
       setIsLoading(false);
     }
@@ -119,6 +181,7 @@ const App: React.FC = () => {
     if (activeSessionId === sessionId) {
       setActiveSessionId(null);
       setAnalysisResult(null);
+      setImageUrl(null);
     }
   };
 
@@ -142,7 +205,7 @@ const App: React.FC = () => {
         <main className="w-full flex flex-col items-center">
           {activeSessionId === null ? (
              <div className="w-full max-w-2xl bg-white p-6 rounded-xl shadow-lg border border-gray-200 no-print">
-                <ImageUploader onImageChange={handleImageChange} imageUrl={imageUrl} />
+                <ImageUploader onImageChange={handleImageChange} imageUrl={imageUrl} fileName={imageFile?.name} />
                 
                 {error && (
                     <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-center">
@@ -163,7 +226,7 @@ const App: React.FC = () => {
                         </>
                     ) : (
                         <>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                         </svg>
                         <span>วิเคราะห์รูปภาพ</span>
@@ -173,7 +236,7 @@ const App: React.FC = () => {
                 </div>
             </div>
           ) : (
-            <div className="w-full max-w-5xl mx-auto mb-8 no-print">
+            <div className="w-full max-w-5xl mx-auto mb-4 no-print">
               <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-800 p-4 rounded-lg flex items-center justify-between shadow-md">
                 <div>
                   <p className="font-bold">กำลังแสดงผลการวิเคราะห์ที่บันทึกไว้:</p>
@@ -186,6 +249,18 @@ const App: React.FC = () => {
                   วิเคราะห์รายการใหม่
                 </button>
               </div>
+                {imageUrl && (
+                    <div className="mt-8">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">รูปภาพที่เกี่ยวข้อง</h3>
+                        <div className="relative group border-2 border-dashed border-gray-200 rounded-lg overflow-hidden bg-gray-50 max-w-2xl mx-auto">
+                            <img 
+                                src={imageUrl} 
+                                alt="รูปภาพที่บันทึกไว้" 
+                                className="w-full h-auto max-h-[400px] object-contain p-2" 
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
           )}
 
