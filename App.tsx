@@ -197,7 +197,10 @@ const App: React.FC = () => {
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900">
             เครื่องมือวิเคราะห์ค่ามิเตอร์ไฟฟ้า (Electric Meter Analyzer)
           </h1>
-          <p className="mt-2 text-md sm:text-lg text-gray-600 max-w-3xl mx-auto">
+          <h2 className="mt-2 text-2xl font-semibold text-gray-700">
+            for TOU Meter
+          </h2>
+          <p className="mt-4 text-md sm:text-lg text-gray-600 max-w-3xl mx-auto">
             อัปโหลดรูปภาพตารางค่ามิเตอร์ไฟฟ้าของคุณเพื่อตรวจสอบความถูกต้องของการคำนวณโดยอัตโนมัติด้วย Gemini AI
           </p>
         </header>
